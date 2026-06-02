@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kiricocho - Preview</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f9fafb; }
+    :root {
+      --primary: #16a34a;
+      --primary-dark: #15803d;
+      --primary-light: #dcfce7;
+      --secondary: #1e3a5f;
+      --accent: #f59e0b;
+      --bg: #f9fafb;
+      --card: #ffffff;
+      --text: #111827;
+      --text-secondary: #6b7280;
+      --border: #e5e7eb;
+      --error: #ef4444;
+      --success: #22c55e;
+    }
+    .app { max-width: 430px; margin: 0 auto; min-height: 100vh; background: white; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.1); }
+    .screen { display: none; flex-direction: column; min-height: 100vh; }
+    .screen.active { display: flex; }
+    .header { background: var(--primary); padding: 48px 20px 20px; color: white; }
+    .header h1 { font-size: 22px; font-weight: 800; }
+    .header p { font-size: 13px; opacity: 0.8; margin-top: 2px; }
+    .content { flex: 1; padding: 20px; overflow-y: auto; }
+    .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+    .btn:hover { background: var(--primary-dark); }
+    .btn-outline { background: white; color: var(--primary); border: 2px solid var(--primary); }
+    .btn-danger { background: var(--error); }
+    .input { width: 100%; padding: 14px; border: 1.5px solid var(--border); border-radius: 12px; font-size: 15px; margin-top: 4px; outline: none; }
+    .input:focus { border-color: var(--primary); }
+    .label { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 14px; display: block; }
+    .tab-bar { display: flex; background: white; border-top: 1px solid var(--border); position: sticky; bottom: 0; }
+    .tab { flex: 1; padding: 12px 4px 16px; text-align: center; cursor: pointer; font-size: 11px; font-weight: 600; color: var(--text-secondary); border: none; background: none; }
+    .tab.active { color: var(--primary); }
+    .tab span { display: block; font-size: 22px; margin-bottom: 2px; }
+    .badge { background: var(--primary); color: white; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; }
+    .badge-yellow { background: var(--accent); }
+    .badge-error { background: var(--error); }
+    .post-card { background: white; border-radius: 16px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .post-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--primary); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 14px; flex-shrink: 0; }
+    .slot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .slot-card { padding: 14px; border-radius: 12px; border: 2px solid var(--border); cursor: pointer; }
+    .slot-card.available { background: var(--primary-light); border-color: var(--primary); }
+    .slot-card.booked { background: #f9fafb; cursor: default; }
+    .slot-card.blocked { background: #fef2f2; border-color: var(--error); cursor: default; }
+    .slot-time { font-weight: 700; font-size: 14px; color: var(--primary); }
+    .slot-status { font-size: 11px; margin-top: 4px; }
+    .level-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin: 8px 0; }
+    .level-fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.5s; }
+    .info-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .booking-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 600; z-index: 9999; opacity: 0; transition: opacity 0.3s; max-width: 360px; text-align: center; }
+    .toast.success { background: var(--success); }
+    .toast.error { background: var(--error); }
+    .toast.show { opacity: 1; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: flex-end; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: white; border-radius: 24px 24px 0 0; padding: 24px; width: 100%; max-width: 430px; margin: 0 auto; }
+    .login-screen { background: var(--primary); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 24px; }
+    .login-screen .logo { text-align: center; margin-bottom: 32px; }
+    .login-screen .logo h1 { font-size: 42px; font-weight: 800; color: white; }
+    .login-screen .logo p { color: rgba(255,255,255,0.8); font-size: 14px; }
+    .form-card { background: white; border-radius: 20px; padding: 24px; }
+    .link-btn { background: none; border: none; color: var(--primary); font-weight: 700; cursor: pointer; font-size: 14px; }
+    .admin-tabs { display: flex; background: white; border-bottom: 1px solid var(--border); }
+    .admin-tab { flex: 1; padding: 12px 4px; text-align: center; font-size: 20px; cursor: pointer; border: none; background: none; border-bottom: 3px solid transparent; }
+    .admin-tab.active { border-bottom-color: var(--primary); }
+    .stat-card { background: white; border-radius: 16px; padding: 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-top: 4px solid var(--primary); }
+    .stat-value { font-size: 36px; font-weight: 800; color: var(--text); }
+    .stat-label { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+    .chip { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .chip-green { background: #dcfce7; color: var(--primary); }
+    .chip-red { background: #fef2f2; color: var(--error); }
+    .chip-yellow { background: #fef9c3; color: #92400e; }
+    select.input { appearance: none; }
+    textarea.input { resize: vertical; min-height: 80px; }
+    @media (max-width: 430px) { .app { box-shadow: none; } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<div class="toast" id="toast"></div>
+
+<script type="text/babel">
+const API = 'https://kiricocho-production.up.railway.app/api';
+let authToken = localStorage.getItem('token');
+let currentUser = null;
+
+const api = axios.create({ baseURL: API });
+api.interceptors.request.use(cfg => {
+  if (authToken) cfg.headers.Authorization = `Bearer ${authToken}`;
+  return cfg;
+});
+
+function showToast(msg, type = 'info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function App() {
+  const [screen, setScreen] = React.useState('loading');
+  const [user, setUser] = React.useState(null);
+  const [tab, setTab] = React.useState('bacheca');
+
+  React.useEffect(() => {
+    if (authToken) {
+      api.get('/auth/me').then(r => {
+        setUser(r.data.user);
+        currentUser = r.data.user;
+        setScreen('main');
+      }).catch(() => {
+        localStorage.removeItem('token');
+        authToken = null;
+        setScreen('login');
+      });
+    } else {
+      setScreen('login');
+    }
+  }, []);
+
+  const handleLogin = (u, t) => {
+    authToken = t;
+    localStorage.setItem('token', t);
+    currentUser = u;
+    setUser(u);
+    setScreen('main');
+  };
+
+  const handleLogout = () => {
+    authToken = null;
+    localStorage.removeItem('token');
+    setUser(null);
+    setScreen('login');
+  };
+
+  if (screen === 'loading') return (
+    <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh',background:'#16a34a'}}>
+      <div style={{color:'white',fontSize:48}}>⚽</div>
+    </div>
+  );
+
+  if (screen === 'register') return <RegisterScreen onBack={() => setScreen('login')} onSuccess={handleLogin} />;
+  if (screen === 'login') return <LoginScreen onRegister={() => setScreen('register')} onLogin={handleLogin} />;
+
+  return (
+    <div className="app">
+      <div style={{flex:1, overflowY:'auto'}}>
+        {tab === 'bacheca' && <BachecaScreen user={user} />}
+        {tab === 'prenota' && <PrenotaScreen user={user} />}
+        {tab === 'profilo' && <ProfiloScreen user={user} setUser={setUser} onLogout={handleLogout} />}
+        {tab === 'admin' && user?.role === 'admin' && <AdminScreen />}
+      </div>
+      <div className="tab-bar">
+        <button className={`tab ${tab==='bacheca'?'active':''}`} onClick={() => setTab('bacheca')}><span>📰</span>Bacheca</button>
+        <button className={`tab ${tab==='prenota'?'active':''}`} onClick={() => setTab('prenota')}><span>📅</span>Prenota</button>
+        <button className={`tab ${tab==='profilo'?'active':''}`} onClick={() => setTab('profilo')}><span>👤</span>Profilo</button>
+        {user?.role === 'admin' && <button className={`tab ${tab==='admin'?'active':''}`} onClick={() => setTab('admin')}><span>⚙️</span>Admin</button>}
+      </div>
+    </div>
+  );
+}
+
+function LoginScreen({ onRegister, onLogin }) {
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
+  const submit = async () => {
+    if (!email || !password) { showToast('Inserisci email e password', 'error'); return; }
+    setLoading(true);
+    try {
+      const r = await api.post('/auth/login', { email, password });
+      onLogin(r.data.user, r.data.token);
+    } catch(e) {
+      showToast(e.response?.data?.message || 'Credenziali non valide', 'error');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="login-screen">
+      <div className="logo">
+        <div style={{fontSize:72, marginBottom:8}}>⚽</div>
+        <h1>Kiricocho</h1>
+        <p>Campo da Calcetto</p>
+      </div>
+      <div className="form-card">
+        <label className="label">Email</label>
+        <input className="input" type="email" placeholder="la-tua@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} />
+        <label className="label">Password</label>
+        <input className="input" type="password" placeholder="••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} />
+        <button className="btn" onClick={submit} disabled={loading} style={{marginTop:20}}>{loading ? 'Accesso...' : 'Accedi'}</button>
+        <p style={{textAlign:'center',marginTop:16,fontSize:14,color:'#6b7280'}}>
+          Non hai un account? <button className="link-btn" onClick={onRegister}>Registrati</button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function RegisterScreen({ onBack, onSuccess }) {
+  const [form, setForm] = React.useState({nome:'',cognome:'',email:'',telefono:'',password:'',confirm:''});
+  const [loading, setLoading] = React.useState(false);
+  const upd = (k,v) => setForm(f => ({...f,[k]:v}));
+
+  const submit = async () => {
+    if (!form.nome||!form.cognome||!form.email||!form.telefono||!form.password) { showToast('Compila tutti i campi','error'); return; }
+    if (form.password !== form.confirm) { showToast('Le password non coincidono','error'); return; }
+    if (form.password.length < 6) { showToast('Password minimo 6 caratteri','error'); return; }
+    setLoading(true);
+    try {
+      const r = await api.post('/auth/register', {nome:form.nome,cognome:form.cognome,email:form.email,telefono:form.telefono,password:form.password});
+      onSuccess(r.data.user, r.data.token);
+    } catch(e) {
+      showToast(e.response?.data?.errors?.[0]?.msg || e.response?.data?.message || 'Errore registrazione','error');
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="login-screen" style={{justifyContent:'flex-start',paddingTop:60}}>
+      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24}}>
+        <button onClick={onBack} style={{background:'none',border:'none',color:'white',fontSize:20,cursor:'pointer'}}>← Indietro</button>
+        <h2 style={{color:'white',fontSize:20,fontWeight:800}}>⚽ Kiricocho</h2>
+      </div>
+      <div className="form-card">
+        <h3 style={{fontSize:20,fontWeight:800,textAlign:'center',marginBottom:4}}>Crea il tuo account</h3>
+        {[['nome','Nome','Mario'],['cognome','Cognome','Rossi'],['email','Email','mario@email.com'],['telefono','Telefono','+39 333 1234567']].map(([k,l,p]) => (
+          <div key={k}><label className="label">{l} *</label><input className="input" placeholder={p} value={form[k]} onChange={e=>upd(k,e.target.value)} type={k==='email'?'email':'text'} /></div>
+        ))}
+        <label className="label">Password *</label>
+        <input className="input" type="password" placeholder="Minimo 6 caratteri" value={form.password} onChange={e=>upd('password',e.target.value)} />
+        <label className="label">Conferma Password *</label>
+        <input className="input" type="password" placeholder="Ripeti la password" value={form.confirm} onChange={e=>upd('confirm',e.target.value)} />
+        <button className="btn" onClick={submit} disabled={loading} style={{marginTop:20}}>{loading?'Registrazione...':'Registrati'}</button>
+        <p style={{textAlign:'center',marginTop:16,fontSize:14,color:'#6b7280'}}>
+          Hai già un account? <button className="link-btn" onClick={onBack}>Accedi</button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BachecaScreen({ user }) {
+  const [posts, setPosts] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [showNew, setShowNew] = React.useState(false);
+  const [newPost, setNewPost] = React.useState({type:'news',title:'',content:''});
+  const [commentText, setCommentText] = React.useState({});
+  const [showComments, setShowComments] = React.useState({});
+
+  React.useEffect(() => { load(); }, []);
+
+  const load = async () => {
+    try { const r = await api.get('/posts'); setPosts(r.data.posts); }
+    catch { showToast('Errore caricamento bacheca','error'); }
+    finally { setLoading(false); }
+  };
+
+  const submit = async () => {
+    if (!newPost.content) { showToast('Scrivi qualcosa!','error'); return; }
+    try {
+      await api.post('/posts', newPost);
+      setNewPost({type:'news',title:'',content:''});
+      setShowNew(false);
+      await load();
+      showToast('Post pubblicato!','success');
+    } catch { showToast('Errore pubblicazione','error'); }
+  };
+
+  const toggleLike = async (id) => {
+    try { await api.post(`/posts/${id}/like`); await load(); } catch {}
+  };
+
+  const sendComment = async (id) => {
+    const text = commentText[id];
+    if (!text) return;
+    try {
+      await api.post(`/posts/${id}/comment`, {text});
+      setCommentText(p => ({...p,[id]:''}));
+      await load();
+    } catch {}
+  };
+
+  const deletePost = async (id) => {
+    if (!confirm('Eliminare questo post?')) return;
+    try { await api.delete(`/posts/${id}`); await load(); showToast('Post eliminato','success'); } catch {}
+  };
+
+  const TYPES = {news:'📰 Notizia',photo:'📷 Foto',announcement:'📢 Annuncio',result:'⚽ Risultato'};
+
+  return (
+    <div>
+      <div className="header" style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div><h1>⚽ Bacheca</h1><p>Notizie e aggiornamenti</p></div>
+        <button onClick={() => setShowNew(!showNew)} style={{background:'rgba(255,255,255,0.2)',border:'none',color:'white',width:36,height:36,borderRadius:'50%',fontSize:22,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center'}}>+</button>
+      </div>
+      <div className="content">
+        {showNew && (
+          <div className="card" style={{borderLeft:'4px solid var(--primary)'}}>
+            <h3 style={{marginBottom:12,fontWeight:700}}>Nuovo Post</h3>
+            <label className="label">Tipo</label>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',marginTop:6}}>
+              {Object.entries(TYPES).map(([v,l]) => (
+                <button key={v} onClick={() => setNewPost(p=>({...p,type:v}))} style={{padding:'6px 14px',borderRadius:20,border:'2px solid',borderColor:newPost.type===v?'var(--primary)':'var(--border)',background:newPost.type===v?'var(--primary)':'white',color:newPost.type===v?'white':'var(--text)',fontSize:13,cursor:'pointer',fontWeight:600}}>{l}</button>
+              ))}
+            </div>
+            <label className="label">Titolo (opzionale)</label>
+            <input className="input" placeholder="Titolo..." value={newPost.title} onChange={e=>setNewPost(p=>({...p,title:e.target.value}))} />
+            <label className="label">Testo *</label>
+            <textarea className="input" placeholder="Scrivi qui..." value={newPost.content} onChange={e=>setNewPost(p=>({...p,content:e.target.value}))} />
+            <div style={{display:'flex',gap:8,marginTop:12}}>
+              <button className="btn btn-outline" style={{width:'auto',flex:1}} onClick={() => setShowNew(false)}>Annulla</button>
+              <button className="btn" style={{width:'auto',flex:1}} onClick={submit}>Pubblica</button>
+            </div>
+          </div>
+        )}
+        {loading ? <p style={{textAlign:'center',color:'var(--text-secondary)',paddingTop:40}}>Caricamento...</p> :
+        posts.length === 0 ? <p style={{textAlign:'center',color:'var(--text-secondary)',paddingTop:40}}>Nessun post ancora. Sii il primo! 🎉</p> :
+        posts.map(p => {
+          const liked = p.likes?.includes(user?._id);
+          const canDel = user?.role==='admin' || p.author?._id===user?._id;
+          const showCmt = showComments[p._id];
+          return (
+            <div key={p._id} className="post-card" style={p.pinned?{borderLeft:'4px solid var(--accent)'}:{}}>
+              {p.pinned && <div style={{fontSize:12,color:'var(--accent)',fontWeight:700,marginBottom:8}}>📌 In evidenza</div>}
+              <div className="post-header">
+                <div className="avatar">{p.author?.nome?.[0]}{p.author?.cognome?.[0]}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700,fontSize:14}}>{p.author?.nome} {p.author?.cognome}</div>
+                  <div style={{fontSize:12,color:'var(--text-secondary)'}}>{TYPES[p.type]?.split(' ')[0]} {new Date(p.createdAt).toLocaleDateString('it-IT')}</div>
+                </div>
+                {canDel && <button onClick={() => deletePost(p._id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:16}}>🗑️</button>}
+              </div>
+              {p.title && <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>{p.title}</div>}
+              <div style={{fontSize:14,lineHeight:1.5,color:'var(--text)'}}>{p.content}</div>
+              <div style={{display:'flex',gap:20,marginTop:12,paddingTop:12,borderTop:'1px solid var(--border)'}}>
+                <button onClick={() => toggleLike(p._id)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:14,color:liked?'var(--error)':'var(--text-secondary)'}}>
+                  {liked ? '❤️' : '🤍'} {p.likes?.length||0}
+                </button>
+                <button onClick={() => setShowComments(s=>({...s,[p._id]:!s[p._id]}))} style={{background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:14,color:'var(--text-secondary)'}}>
+                  💬 {p.comments?.length||0}
+                </button>
+              </div>
+              {showCmt && (
+                <div style={{marginTop:10}}>
+                  {p.comments?.map(c => (
+                    <div key={c._id} style={{fontSize:13,padding:'6px 0',borderTop:'1px solid var(--border)'}}>
+                      <strong>{c.user?.nome}: </strong>{c.text}
+                    </div>
+                  ))}
+                  <div style={{display:'flex',gap:8,marginTop:8}}>
+                    <input className="input" style={{padding:'8px 12px',fontSize:13}} placeholder="Commenta..." value={commentText[p._id]||''} onChange={e=>setCommentText(s=>({...s,[p._id]:e.target.value}))} onKeyDown={e=>e.key==='Enter'&&sendComment(p._id)} />
+                    <button onClick={() => sendComment(p._id)} style={{background:'var(--primary)',border:'none',color:'white',borderRadius:10,padding:'0 14px',cursor:'pointer',fontSize:18}}>➤</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function PrenotaScreen() {
+  const today = new Date().toISOString().slice(0,10);
+  const [date, setDate] = React.useState(today);
+  const [slots, setSlots] = React.useState([]);
+  const [loading, setLoading] = React.useState(false);
+  const [selected, setSelected] = React.useState(null);
+  const [teamName, setTeamName] = React.useState('');
+  const [notes, setNotes] = React.useState('');
+  const [booking, setBooking] = React.useState(false);
+
+  React.useEffect(() => { loadSlots(date); }, [date]);
+
+  const loadSlots = async (d) => {
+    setLoading(true);
+    try { const r = await api.get(`/bookings/availability?date=${d}`); setSlots(r.data.slots); }
+    catch { showToast('Errore caricamento disponibilità','error'); }
+    finally { setLoading(false); }
+  };
+
+  const book = async () => {
+    setBooking(true);
+    try {
+      await api.post('/bookings', {date, timeSlot:selected, teamName, notes});
+      setSelected(null); setTeamName(''); setNotes('');
+      await loadSlots(date);
+      showToast(`🎉 Prenotazione confermata! ${date} - ${selected}`,'success');
+    } catch(e) {
+      showToast(e.response?.data?.message || 'Errore prenotazione','error');
+    } finally { setBooking(false); }
+  };
+
+  const fmt = (d) => new Date(d+'T12:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+
+  return (
+    <div>
+      <div className="header"><h1>📅 Prenota il Campo</h1><p>Scegli data e fascia oraria</p></div>
+      <div className="content">
+        <div className="card">
+          <label className="label" style={{marginTop:0}}>Seleziona data</label>
+          <input className="input" type="date" value={date} min={today} onChange={e=>setDate(e.target.value)} style={{marginTop:6}} />
+        </div>
+        <h3 style={{fontSize:15,fontWeight:700,marginBottom:12,textTransform:'capitalize'}}>{fmt(date)}</h3>
+        {loading ? <p style={{textAlign:'center',color:'var(--text-secondary)'}}>Caricamento...</p> : (
+          <div className="slot-grid">
+            {slots.map(s => (
+              <div key={s.slot} className={`slot-card ${s.available?'available':s.blocked?'blocked':'booked'}`} onClick={() => s.available && setSelected(s.slot)}>
+                <div className="slot-time" style={!s.available?{color:'var(--text-secondary)'}:{}}>{s.slot}</div>
+                <div className="slot-status" style={{color:s.available?'var(--primary)':s.blocked?'var(--error)':'var(--text-secondary)'}}>
+                  {s.available ? '✓ Disponibile' : s.blocked ? `🚫 ${s.blockReason||'Non disp.'}` : `👥 ${s.bookedBy?.nome||'Occupato'}`}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {selected && (
+          <div className="card" style={{marginTop:16,borderLeft:'4px solid var(--primary)'}}>
+            <h3 style={{fontWeight:700,marginBottom:12}}>Conferma Prenotazione</h3>
+            <p style={{fontSize:14,marginBottom:8}}>📅 {fmt(date)}</p>
+            <p style={{fontSize:14,marginBottom:16}}>⏰ {selected}</p>
+            <label className="label" style={{marginTop:0}}>Nome squadra (opzionale)</label>
+            <input className="input" placeholder="Es. FC Kiricocho" value={teamName} onChange={e=>setTeamName(e.target.value)} />
+            <label className="label">Note (opzionale)</label>
+            <textarea className="input" placeholder="Eventuali note..." value={notes} onChange={e=>setNotes(e.target.value)} style={{minHeight:60}} />
+            <div style={{display:'flex',gap:8,marginTop:12}}>
+              <button className="btn btn-outline" style={{width:'auto',flex:1}} onClick={() => setSelected(null)}>Annulla</button>
+              <button className="btn" style={{width:'auto',flex:1}} onClick={book} disabled={booking}>{booking?'Prenotando...':'Conferma'}</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ProfiloScreen({ user, setUser, onLogout }) {
+  const [bookings, setBookings] = React.useState([]);
+  const LEVELS = ['🌱','⭐','🌟','🏅','🏆'];
+
+  React.useEffect(() => {
+    api.get('/bookings/my').then(r => setBookings(r.data.bookings)).catch(()=>{});
+    api.get('/auth/me').then(r => setUser(r.data.user)).catch(()=>{});
+  }, []);
+
+  if (!user) return null;
+  const lvl = user.level;
+  const upcoming = bookings.filter(b => b.date >= new Date().toISOString().slice(0,10) && b.status==='confirmed');
+  const past = bookings.filter(b => b.date < new Date().toISOString().slice(0,10) || b.status==='cancelled');
+
+  return (
+    <div>
+      <div className="header" style={{textAlign:'center'}}>
+        <div style={{width:72,height:72,borderRadius:'50%',background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 12px',fontSize:28,fontWeight:700,color:'white'}}>
+          {user.nome[0]}{user.cognome[0]}
+        </div>
+        <h1 style={{fontSize:22}}>{user.nome} {user.cognome}</h1>
+        <p>{user.email}</p>
+        {user.role==='admin' && <span className="chip chip-yellow" style={{marginTop:8,display:'inline-block'}}>👑 Amministratore</span>}
+      </div>
+      <div className="content">
+        <div className="card">
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+            <span style={{fontSize:36}}>{LEVELS[(lvl.number-1)%5]}</span>
+            <div style={{flex:1}}>
+              <div style={{fontWeight:800,fontSize:16}}>{lvl.name}</div>
+              <div style={{fontSize:13,color:'var(--text-secondary)'}}>Livello {lvl.number}</div>
+            </div>
+            <div style={{textAlign:'right'}}>
+              <div style={{fontWeight:700,color:'var(--primary)',fontSize:16}}>{lvl.gamesPlayed} partite</div>
+              {lvl.gamesForNext && <div style={{fontSize:11,color:'var(--text-secondary)'}}>Prossimo: {lvl.gamesForNext}</div>}
+            </div>
+          </div>
+          {lvl.gamesForNext && <>
+            <div className="level-bar"><div className="level-fill" style={{width:`${lvl.progress}%`}} /></div>
+            <div style={{fontSize:11,color:'var(--text-secondary)',textAlign:'right'}}>{lvl.progress}% al livello successivo</div>
+          </>}
+        </div>
+
+        <div className="card">
+          <h3 style={{fontWeight:700,marginBottom:12}}>Dati Personali</h3>
+          <div className="info-row"><span>📞</span><div><div style={{fontSize:11,color:'var(--text-secondary)'}}>Telefono</div><div style={{fontWeight:500}}>{user.telefono}</div></div></div>
+          <div className="info-row" style={{borderBottom:'none'}}><span>✉️</span><div><div style={{fontSize:11,color:'var(--text-secondary)'}}>Email</div><div style={{fontWeight:500}}>{user.email}</div></div></div>
+        </div>
+
+        <div className="card">
+          <h3 style={{fontWeight:700,marginBottom:12}}>Prossime Partite ({upcoming.length})</h3>
+          {upcoming.length===0 ? <p style={{fontSize:14,color:'var(--text-secondary)'}}>Nessuna prenotazione futura.</p> :
+          upcoming.map(b => (
+            <div key={b._id} className="booking-item">
+              <div>
+                <div style={{fontWeight:700,fontSize:14,textTransform:'capitalize'}}>{new Date(b.date+'T12:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})}</div>
+                <div style={{fontSize:13,color:'var(--primary)'}}>⏰ {b.timeSlot}</div>
+                {b.teamName && <div style={{fontSize:12,color:'var(--text-secondary)'}}>👥 {b.teamName}</div>}
+              </div>
+              <span className="chip chip-green">Confermata</span>
+            </div>
+          ))}
+        </div>
+
+        {past.length>0 && (
+          <div className="card">
+            <h3 style={{fontWeight:700,marginBottom:12}}>Storico ({past.length})</h3>
+            {past.slice(0,5).map(b => (
+              <div key={b._id} className="booking-item">
+                <div>
+                  <div style={{fontWeight:700,fontSize:14}}>{new Date(b.date+'T12:00:00').toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})}</div>
+                  <div style={{fontSize:13,color:'var(--text-secondary)'}}>⏰ {b.timeSlot}</div>
+                </div>
+                <span className={`chip ${b.status==='confirmed'?'chip-green':'chip-red'}`}>{b.status==='confirmed'?'✓ Giocata':'✗ Cancellata'}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button className="btn btn-danger" onClick={() => { if(confirm('Vuoi uscire?')) onLogout(); }} style={{marginTop:8}}>🚪 Esci dall'account</button>
+        <div style={{height:20}} />
+      </div>
+    </div>
+  );
+}
+
+function AdminScreen() {
+  const [tab, setTab] = React.useState('stats');
+  const [stats, setStats] = React.useState(null);
+  const [blocked, setBlocked] = React.useState([]);
+  const [bookings, setBookings] = React.useState([]);
+  const [users, setUsers] = React.useState([]);
+  const [blockForm, setBlockForm] = React.useState({slot:'20:00-21:30',date:'',reason:''});
+  const SLOTS = ['08:00-09:30','09:30-11:00','11:00-12:30','12:30-14:00','14:00-15:30','15:30-17:00','17:00-18:30','18:30-20:00','20:00-21:30','21:30-23:00'];
+
+  React.useEffect(() => { load(); }, [tab]);
+
+  const load = async () => {
+    try {
+      if (tab==='stats') { const r = await api.get('/admin/stats'); setStats(r.data); }
+      else if (tab==='slots') { const r = await api.get('/admin/slots'); setBlocked(r.data.blocked); }
+      else if (tab==='bookings') { const r = await api.get('/admin/bookings'); setBookings(r.data.bookings); }
+      else if (tab==='users') { const r = await api.get('/admin/users'); setUsers(r.data.users); }
+    } catch { showToast('Errore caricamento','error'); }
+  };
+
+  const blockSlot = async () => {
+    try {
+      await api.post('/admin/slots/block', {slot:blockForm.slot, date:blockForm.date||undefined, reason:blockForm.reason});
+      setBlockForm({slot:SLOTS[0],date:'',reason:''});
+      await load();
+      showToast('Fascia bloccata','success');
+    } catch(e) { showToast(e.response?.data?.message||'Errore','error'); }
+  };
+
+  const unblock = async (id) => {
+    if(!confirm('Sbloccare questa fascia?')) return;
+    await api.delete(`/admin/slots/block/${id}`);
+    await load();
+  };
+
+  const complete = async (id) => {
+    try { await api.post(`/bookings/${id}/complete`); await load(); showToast('Partita completata! Livello aggiornato 🎉','success'); }
+    catch(e) { showToast(e.response?.data?.message||'Errore','error'); }
+  };
+
+  return (
+    <div>
+      <div className="header"><h1>⚙️ Pannello Admin</h1></div>
+      <div className="admin-tabs">
+        {[['stats','📊'],['slots','🕐'],['bookings','📋'],['users','👥']].map(([t,ic]) => (
+          <button key={t} className={`admin-tab ${tab===t?'active':''}`} onClick={() => setTab(t)}>{ic}</button>
+        ))}
+      </div>
+      <div className="content">
+        {tab==='stats' && stats && (
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+            <div className="stat-card"><div className="stat-value">{stats.totalUsers}</div><div className="stat-label">Utenti</div></div>
+            <div className="stat-card" style={{borderTopColor:'var(--secondary)'}}><div className="stat-value">{stats.totalBookings}</div><div className="stat-label">Prenotazioni</div></div>
+            <div className="stat-card" style={{borderTopColor:'var(--accent)',gridColumn:'1/-1'}}><div className="stat-value">{stats.upcomingBookings}</div><div className="stat-label">Prossime partite</div></div>
+          </div>
+        )}
+        {tab==='slots' && (
+          <>
+            <div className="card">
+              <h3 style={{fontWeight:700,marginBottom:12}}>Blocca Fascia Oraria</h3>
+              <label className="label" style={{marginTop:0}}>Fascia</label>
+              <select className="input" value={blockForm.slot} onChange={e=>setBlockForm(f=>({...f,slot:e.target.value}))}>
+                {SLOTS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <label className="label">Data (vuoto = sempre bloccata)</label>
+              <input className="input" type="date" value={blockForm.date} onChange={e=>setBlockForm(f=>({...f,date:e.target.value}))} />
+              <label className="label">Motivo</label>
+              <input className="input" placeholder="Es. Manutenzione" value={blockForm.reason} onChange={e=>setBlockForm(f=>({...f,reason:e.target.value}))} />
+              <button className="btn btn-danger" onClick={blockSlot} style={{marginTop:12}}>🚫 Blocca Fascia</button>
+            </div>
+            {blocked.length===0 ? <p style={{textAlign:'center',color:'var(--text-secondary)',paddingTop:20}}>Nessuna fascia bloccata</p> :
+            blocked.map(b => (
+              <div key={b._id} className="card" style={{borderLeft:'4px solid var(--error)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <div>
+                  <div style={{fontWeight:700}}>{b.slot}</div>
+                  <div style={{fontSize:13,color:'var(--text-secondary)'}}>{b.date||'Sempre'}</div>
+                  {b.reason && <div style={{fontSize:12,color:'var(--error)'}}>{b.reason}</div>}
+                </div>
+                <button onClick={() => unblock(b._id)} style={{background:'none',border:'none',cursor:'pointer',fontSize:20}}>🔓</button>
+              </div>
+            ))}
+          </>
+        )}
+        {tab==='bookings' && (
+          bookings.length===0 ? <p style={{textAlign:'center',color:'var(--text-secondary)',paddingTop:20}}>Nessuna prenotazione</p> :
+          bookings.map(b => (
+            <div key={b._id} className="card" style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700}}>{b.user?.nome} {b.user?.cognome}</div>
+                <div style={{fontSize:13,color:'var(--primary)'}}>{b.date} — {b.timeSlot}</div>
+                {b.teamName && <div style={{fontSize:12,color:'var(--text-secondary)'}}>👥 {b.teamName}</div>}
+                <span className={`chip ${b.status==='confirmed'?'chip-green':'chip-red'}`} style={{marginTop:4,display:'inline-block'}}>{b.status==='confirmed'?'✓ Confermata':'✗ Cancellata'}</span>
+              </div>
+              {b.status==='confirmed' && !b.gameCompleted &&
+                <button onClick={() => complete(b._id)} style={{background:'var(--primary-light)',color:'var(--primary)',border:'none',borderRadius:10,padding:'8px 12px',cursor:'pointer',fontWeight:700,fontSize:13,whiteSpace:'nowrap'}}>✅ Completa</button>
+              }
+              {b.gameCompleted && <span style={{fontSize:12,color:'var(--success)',fontWeight:700}}>✅ Giocata</span>}
+            </div>
+          ))
+        )}
+        {tab==='users' && (
+          users.map(u => (
+            <div key={u._id} className="card" style={{display:'flex',alignItems:'center',gap:12}}>
+              <div className="avatar">{u.nome[0]}{u.cognome[0]}</div>
+              <div style={{flex:1}}>
+                <div style={{fontWeight:700}}>{u.nome} {u.cognome}</div>
+                <div style={{fontSize:12,color:'var(--text-secondary)'}}>{u.email}</div>
+                <div style={{fontSize:12,color:'var(--primary)',marginTop:2}}>{u.gamesPlayed} partite · {u.role==='admin'?'👑 Admin':'👤 Utente'}</div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
