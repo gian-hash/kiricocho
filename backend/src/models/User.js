@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const LEVELS = [
-  { name: 'Pivetto', minGames: 0 },
+  { name: 'Pivello', minGames: 0 },
   { name: 'Amatore', minGames: 50 },
   { name: 'Semiprofessionista', minGames: 100 },
   { name: 'Professionista', minGames: 200 },
