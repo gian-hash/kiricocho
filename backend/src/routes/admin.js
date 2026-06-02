@@ -67,6 +67,34 @@ router.patch('/users/:id/toggle', async (req, res) => {
   res.json({ isActive: user.isActive });
 });
 
+// POST /api/admin/bookings — prenota per conto di un utente
+router.post('/bookings', async (req, res) => {
+  const { userId, date, timeSlot, teamName, notes } = req.body;
+  if (!userId || !date || !timeSlot) return res.status(400).json({ message: 'userId, data e fascia oraria obbligatori.' });
+
+  const user = await User.findById(userId);
+  if (!user) return res.status(404).json({ message: 'Utente non trovato.' });
+
+  const blocked = await BlockedSlot.findOne({ slot: timeSlot, $or: [{ date }, { date: null }] });
+  if (blocked) return res.status(400).json({ message: 'Fascia oraria non disponibile.' });
+
+  const existing = await Booking.findOne({ date, timeSlot, status: 'confirmed' });
+  if (existing) return res.status(400).json({ message: 'Fascia oraria già prenotata.' });
+
+  const booking = await Booking.create({ user: userId, date, timeSlot, teamName, notes });
+  await booking.populate('user', 'nome cognome email telefono');
+  res.status(201).json({ booking });
+});
+
+// DELETE /api/admin/bookings/:id — cancella prenotazione di qualsiasi utente
+router.delete('/bookings/:id', async (req, res) => {
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) return res.status(404).json({ message: 'Prenotazione non trovata.' });
+  booking.status = 'cancelled';
+  await booking.save();
+  res.json({ message: 'Prenotazione cancellata dall\'admin.' });
+});
+
 // GET /api/admin/stats — statistiche generali
 router.get('/stats', async (req, res) => {
   const [totalUsers, totalBookings, upcomingBookings] = await Promise.all([

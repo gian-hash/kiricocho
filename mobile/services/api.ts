@@ -67,6 +67,9 @@ export const adminAPI = {
     api.post('/admin/slots/block', { slot, date, reason }),
   unblockSlot: (id: string) => api.delete(`/admin/slots/block/${id}`),
   allBookings: (date?: string) => api.get(`/admin/bookings${date ? `?date=${date}` : ''}`),
+  bookForUser: (data: { userId: string; date: string; timeSlot: string; teamName?: string; notes?: string }) =>
+    api.post('/admin/bookings', data),
+  cancelBooking: (id: string) => api.delete(`/admin/bookings/${id}`),
   users: () => api.get('/admin/users'),
   setRole: (id: string, role: string) => api.patch(`/admin/users/${id}/role`, { role }),
   toggleUser: (id: string) => api.patch(`/admin/users/${id}/toggle`),

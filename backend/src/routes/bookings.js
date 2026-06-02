@@ -10,7 +10,7 @@ router.get('/availability', auth, async (req, res) => {
   if (!date) return res.status(400).json({ message: 'Data obbligatoria' });
 
   const [booked, blocked] = await Promise.all([
-    Booking.find({ date, status: 'confirmed' }).select('timeSlot user').populate('user', 'nome cognome'),
+    Booking.find({ date, status: 'confirmed' }).select('timeSlot user'),
     BlockedSlot.find({ $or: [{ date }, { date: null }] }).select('slot reason'),
   ]);
 
@@ -21,7 +21,7 @@ router.get('/availability', auth, async (req, res) => {
   const slots = DEFAULT_SLOTS.map((slot) => ({
     slot,
     available: !blockedSlots.has(slot) && !bookedMap[slot],
-    bookedBy: bookedMap[slot]?.user || null,
+    bookedBy: null, // nascosto agli utenti
     blocked: blockedSlots.has(slot),
     blockReason: blocked.find((b) => b.slot === slot)?.reason || null,
   }));

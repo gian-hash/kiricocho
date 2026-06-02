@@ -257,7 +257,7 @@ function BachecaScreen({ user }) {
   const [posts, setPosts] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
   const [showNew, setShowNew] = React.useState(false);
-  const [newPost, setNewPost] = React.useState({type:'news',title:'',content:''});
+  const [newPost, setNewPost] = React.useState({type:'news',title:'',content:'',imageFile:null,imagePreview:null});
   const [commentText, setCommentText] = React.useState({});
   const [showComments, setShowComments] = React.useState({});
 
@@ -272,8 +272,13 @@ function BachecaScreen({ user }) {
   const submit = async () => {
     if (!newPost.content) { showToast('Scrivi qualcosa!','error'); return; }
     try {
-      await api.post('/posts', newPost);
-      setNewPost({type:'news',title:'',content:''});
+      const fd = new FormData();
+      fd.append('type', newPost.type);
+      fd.append('title', newPost.title);
+      fd.append('content', newPost.content);
+      if (newPost.imageFile) fd.append('image', newPost.imageFile);
+      await api.post('/posts', fd, {headers:{'Content-Type':'multipart/form-data'}});
+      setNewPost({type:'news',title:'',content:'',imageFile:null,imagePreview:null});
       setShowNew(false);
       await load();
       showToast('Post pubblicato!','success');
@@ -321,6 +326,9 @@ function BachecaScreen({ user }) {
             <input className="input" placeholder="Titolo..." value={newPost.title} onChange={e=>setNewPost(p=>({...p,title:e.target.value}))} />
             <label className="label">Testo *</label>
             <textarea className="input" placeholder="Scrivi qui..." value={newPost.content} onChange={e=>setNewPost(p=>({...p,content:e.target.value}))} />
+            <label className="label">Immagine (opzionale)</label>
+            <input type="file" accept="image/*" className="input" style={{padding:'10px'}} onChange={e=>setNewPost(p=>({...p,imageFile:e.target.files[0],imagePreview:e.target.files[0]?URL.createObjectURL(e.target.files[0]):null}))} />
+            {newPost.imagePreview && <img src={newPost.imagePreview} style={{width:'100%',borderRadius:12,marginTop:8,maxHeight:200,objectFit:'cover'}} />}
             <div style={{display:'flex',gap:8,marginTop:12}}>
               <button className="btn btn-outline" style={{width:'auto',flex:1}} onClick={() => setShowNew(false)}>Annulla</button>
               <button className="btn" style={{width:'auto',flex:1}} onClick={submit}>Pubblica</button>
@@ -420,10 +428,10 @@ function PrenotaScreen() {
         {loading ? <p style={{textAlign:'center',color:'var(--text-secondary)'}}>Caricamento...</p> : (
           <div className="slot-grid">
             {slots.map(s => (
-              <div key={s.slot} className={`slot-card ${s.available?'available':s.blocked?'blocked':'booked'}`} onClick={() => s.available && setSelected(s.slot)}>
+              <div key={s.slot} className={`slot-card ${s.available?'available':s.blocked?'blocked':'booked'}`} onClick={() => s.available && setSelected(s.slot)} style={selected===s.slot?{outline:'3px solid var(--primary)'}:{}}>
                 <div className="slot-time" style={!s.available?{color:'var(--text-secondary)'}:{}}>{s.slot}</div>
                 <div className="slot-status" style={{color:s.available?'var(--primary)':s.blocked?'var(--error)':'var(--text-secondary)'}}>
-                  {s.available ? '✓ Disponibile' : s.blocked ? `🚫 ${s.blockReason||'Non disp.'}` : `👥 ${s.bookedBy?.nome||'Occupato'}`}
+                  {s.available ? '✓ Disponibile' : s.blocked ? `🚫 ${s.blockReason||'Non disponibile'}` : '🔴 Non disponibile'}
                 </div>
               </div>
             ))}
@@ -542,6 +550,8 @@ function AdminScreen() {
   const [bookings, setBookings] = React.useState([]);
   const [users, setUsers] = React.useState([]);
   const [blockForm, setBlockForm] = React.useState({slot:'20:00-21:30',date:'',reason:''});
+  const [bookForUser, setBookForUser] = React.useState(null); // utente selezionato per prenotare
+  const [bookForm, setBookForm] = React.useState({date:'',slot:'20:00-21:30',teamName:'',notes:''});
   const SLOTS = ['08:00-09:30','09:30-11:00','11:00-12:30','12:30-14:00','14:00-15:30','15:30-17:00','17:00-18:30','18:30-20:00','20:00-21:30','21:30-23:00'];
 
   React.useEffect(() => { load(); }, [tab]);
@@ -573,6 +583,22 @@ function AdminScreen() {
   const complete = async (id) => {
     try { await api.post(`/bookings/${id}/complete`); await load(); showToast('Partita completata! Livello aggiornato 🎉','success'); }
     catch(e) { showToast(e.response?.data?.message||'Errore','error'); }
+  };
+
+  const cancelBooking = async (id) => {
+    if (!confirm('Cancellare questa prenotazione?')) return;
+    try { await api.delete(`/admin/bookings/${id}`); await load(); showToast('Prenotazione cancellata','success'); }
+    catch(e) { showToast(e.response?.data?.message||'Errore','error'); }
+  };
+
+  const submitBookForUser = async () => {
+    if (!bookForm.date || !bookForm.slot) { showToast('Compila data e fascia','error'); return; }
+    try {
+      await api.post('/admin/bookings', {userId: bookForUser._id, date: bookForm.date, timeSlot: bookForm.slot, teamName: bookForm.teamName, notes: bookForm.notes});
+      setBookForUser(null);
+      setBookForm({date:'',slot:'20:00-21:30',teamName:'',notes:''});
+      showToast(`✅ Campo prenotato per ${bookForUser.nome}!`,'success');
+    } catch(e) { showToast(e.response?.data?.message||'Errore','error'); }
   };
 
   return (
@@ -628,24 +654,56 @@ function AdminScreen() {
                 {b.teamName && <div style={{fontSize:12,color:'var(--text-secondary)'}}>👥 {b.teamName}</div>}
                 <span className={`chip ${b.status==='confirmed'?'chip-green':'chip-red'}`} style={{marginTop:4,display:'inline-block'}}>{b.status==='confirmed'?'✓ Confermata':'✗ Cancellata'}</span>
               </div>
-              {b.status==='confirmed' && !b.gameCompleted &&
-                <button onClick={() => complete(b._id)} style={{background:'var(--primary-light)',color:'var(--primary)',border:'none',borderRadius:10,padding:'8px 12px',cursor:'pointer',fontWeight:700,fontSize:13,whiteSpace:'nowrap'}}>✅ Completa</button>
-              }
-              {b.gameCompleted && <span style={{fontSize:12,color:'var(--success)',fontWeight:700}}>✅ Giocata</span>}
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                {b.status==='confirmed' && !b.gameCompleted &&
+                  <button onClick={() => complete(b._id)} style={{background:'var(--primary-light)',color:'var(--primary)',border:'none',borderRadius:10,padding:'8px 12px',cursor:'pointer',fontWeight:700,fontSize:13,whiteSpace:'nowrap'}}>✅ Completa</button>
+                }
+                {b.status==='confirmed' &&
+                  <button onClick={() => cancelBooking(b._id)} style={{background:'#fef2f2',color:'var(--error)',border:'none',borderRadius:10,padding:'8px 12px',cursor:'pointer',fontWeight:700,fontSize:13,whiteSpace:'nowrap'}}>🗑️ Cancella</button>
+                }
+                {b.gameCompleted && <span style={{fontSize:12,color:'var(--success)',fontWeight:700}}>✅ Giocata</span>}
+              </div>
             </div>
           ))
         )}
         {tab==='users' && (
-          users.map(u => (
-            <div key={u._id} className="card" style={{display:'flex',alignItems:'center',gap:12}}>
-              <div className="avatar">{u.nome[0]}{u.cognome[0]}</div>
-              <div style={{flex:1}}>
-                <div style={{fontWeight:700}}>{u.nome} {u.cognome}</div>
-                <div style={{fontSize:12,color:'var(--text-secondary)'}}>{u.email}</div>
-                <div style={{fontSize:12,color:'var(--primary)',marginTop:2}}>{u.gamesPlayed} partite · {u.role==='admin'?'👑 Admin':'👤 Utente'}</div>
+          <>
+            {users.map(u => (
+              <div key={u._id} className="card" style={{display:'flex',alignItems:'center',gap:12}}>
+                <div className="avatar">{u.nome[0]}{u.cognome[0]}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontWeight:700}}>{u.nome} {u.cognome}</div>
+                  <div style={{fontSize:12,color:'var(--text-secondary)'}}>{u.email}</div>
+                  <div style={{fontSize:12,color:'var(--primary)',marginTop:2}}>{u.gamesPlayed} partite · {u.role==='admin'?'👑 Admin':'👤 Utente'}</div>
+                </div>
+                <button onClick={() => setBookForUser(u)} style={{background:'var(--primary-light)',color:'var(--primary)',border:'none',borderRadius:10,padding:'8px 10px',cursor:'pointer',fontWeight:700,fontSize:12,whiteSpace:'nowrap'}}>📅 Prenota</button>
               </div>
-            </div>
-          ))
+            ))}
+
+            {/* Modal prenota per utente */}
+            {bookForUser && (
+              <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:1000,display:'flex',alignItems:'flex-end'}}>
+                <div style={{background:'white',borderRadius:'24px 24px 0 0',padding:24,width:'100%',maxWidth:430,margin:'0 auto'}}>
+                  <h3 style={{fontWeight:800,marginBottom:4}}>📅 Prenota per</h3>
+                  <p style={{color:'var(--primary)',fontWeight:700,marginBottom:16}}>{bookForUser.nome} {bookForUser.cognome}</p>
+                  <label className="label" style={{marginTop:0}}>Data *</label>
+                  <input className="input" type="date" value={bookForm.date} min={new Date().toISOString().slice(0,10)} onChange={e=>setBookForm(f=>({...f,date:e.target.value}))} />
+                  <label className="label">Fascia oraria *</label>
+                  <select className="input" value={bookForm.slot} onChange={e=>setBookForm(f=>({...f,slot:e.target.value}))}>
+                    {SLOTS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <label className="label">Nome squadra</label>
+                  <input className="input" placeholder="Es. FC Kiricocho" value={bookForm.teamName} onChange={e=>setBookForm(f=>({...f,teamName:e.target.value}))} />
+                  <label className="label">Note</label>
+                  <input className="input" placeholder="Eventuali note..." value={bookForm.notes} onChange={e=>setBookForm(f=>({...f,notes:e.target.value}))} />
+                  <div style={{display:'flex',gap:8,marginTop:16}}>
+                    <button className="btn btn-outline" style={{width:'auto',flex:1}} onClick={() => setBookForUser(null)}>Annulla</button>
+                    <button className="btn" style={{width:'auto',flex:1}} onClick={submitBookForUser}>Conferma</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
