@@ -25,13 +25,13 @@
       --error: #ef4444;
       --success: #22c55e;
     }
-    .app { max-width: 430px; margin: 0 auto; min-height: 100vh; background: white; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.1); }
+    .app { max-width: 430px; margin: 0 auto; height: 100vh; background: white; position: relative; box-shadow: 0 0 40px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
     .screen { display: none; flex-direction: column; min-height: 100vh; }
     .screen.active { display: flex; }
-    .header { background: var(--primary); padding: 48px 20px 20px; color: white; }
-    .header h1 { font-size: 22px; font-weight: 800; }
-    .header p { font-size: 13px; opacity: 0.8; margin-top: 2px; }
-    .content { flex: 1; padding: 20px; overflow-y: auto; }
+    .header { background: var(--primary); padding: 14px 20px; color: white; }
+    .header h1 { font-size: 18px; font-weight: 800; }
+    .header p { font-size: 12px; opacity: 0.8; margin-top: 1px; }
+    .content { flex: 1; padding: 16px; overflow-y: auto; padding-bottom: 80px; }
     .card { background: white; border-radius: 16px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
     .btn { width: 100%; padding: 14px; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
     .btn:hover { background: var(--primary-dark); }
@@ -40,8 +40,8 @@
     .input { width: 100%; padding: 14px; border: 1.5px solid var(--border); border-radius: 12px; font-size: 15px; margin-top: 4px; outline: none; }
     .input:focus { border-color: var(--primary); }
     .label { font-size: 13px; font-weight: 600; color: var(--text); margin-top: 14px; display: block; }
-    .tab-bar { display: flex; background: white; border-top: 1px solid var(--border); position: sticky; bottom: 0; }
-    .tab { flex: 1; padding: 12px 4px 16px; text-align: center; cursor: pointer; font-size: 11px; font-weight: 600; color: var(--text-secondary); border: none; background: none; }
+    .tab-bar { display: flex; background: white; border-top: 1px solid var(--border); position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; z-index: 100; padding-bottom: env(safe-area-inset-bottom); }
+    .tab { flex: 1; padding: 10px 4px 12px; text-align: center; cursor: pointer; font-size: 11px; font-weight: 600; color: var(--text-secondary); border: none; background: none; }
     .tab.active { color: var(--primary); }
     .tab span { display: block; font-size: 22px; margin-bottom: 2px; }
     .badge { background: var(--primary); color: white; padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; }
@@ -466,6 +466,18 @@ function ProfiloScreen({ user, setUser, onLogout }) {
     api.get('/auth/me').then(r => setUser(r.data.user)).catch(()=>{});
   }, []);
 
+  const cancelBooking = async (id) => {
+    if (!confirm('Vuoi cancellare questa prenotazione?')) return;
+    try {
+      await api.delete(`/bookings/${id}`);
+      const r = await api.get('/bookings/my');
+      setBookings(r.data.bookings);
+      showToast('Prenotazione cancellata', 'success');
+    } catch(e) {
+      showToast(e.response?.data?.message || 'Errore cancellazione', 'error');
+    }
+  };
+
   if (!user) return null;
   const lvl = user.level;
   const upcoming = bookings.filter(b => b.date >= new Date().toISOString().slice(0,10) && b.status==='confirmed');
@@ -516,7 +528,10 @@ function ProfiloScreen({ user, setUser, onLogout }) {
                 <div style={{fontSize:13,color:'var(--primary)'}}>⏰ {b.timeSlot}</div>
                 {b.teamName && <div style={{fontSize:12,color:'var(--text-secondary)'}}>👥 {b.teamName}</div>}
               </div>
-              <span className="chip chip-green">Confermata</span>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
+                <span className="chip chip-green">Confermata</span>
+                <button onClick={() => cancelBooking(b._id)} style={{background:'#fef2f2',color:'var(--error)',border:'none',borderRadius:8,padding:'4px 10px',cursor:'pointer',fontWeight:700,fontSize:12}}>✕ Cancella</button>
+              </div>
             </div>
           ))}
         </div>
@@ -543,34 +558,102 @@ function ProfiloScreen({ user, setUser, onLogout }) {
   );
 }
 
+function UserSearch({ users, value, onChange }) {
+  const [query, setQuery] = React.useState('');
+  const [open, setOpen] = React.useState(false);
+
+  const selected = users.find(u => u._id === value);
+  const filtered = users.filter(u =>
+    `${u.nome} ${u.cognome} ${u.email}`.toLowerCase().includes(query.toLowerCase())
+  );
+
+  const select = (u) => {
+    onChange(u._id);
+    setQuery(`${u.nome} ${u.cognome}`);
+    setOpen(false);
+  };
+
+  const clear = () => {
+    onChange('');
+    setQuery('');
+    setOpen(false);
+  };
+
+  return (
+    <div style={{position:'relative'}}>
+      <div style={{position:'relative'}}>
+        <input
+          className="input"
+          placeholder="Cerca per nome o email..."
+          value={query}
+          onChange={e => { setQuery(e.target.value); setOpen(true); if(!e.target.value) onChange(''); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+        />
+        {query && (
+          <button onClick={clear} style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',fontSize:16,color:'var(--text-secondary)'}}>✕</button>
+        )}
+      </div>
+      {open && query && filtered.length > 0 && (
+        <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:'1.5px solid var(--border)',borderRadius:12,zIndex:100,boxShadow:'0 4px 16px rgba(0,0,0,0.1)',maxHeight:200,overflowY:'auto'}}>
+          {filtered.map(u => (
+            <div key={u._id} onMouseDown={() => select(u)} style={{padding:'10px 14px',cursor:'pointer',borderBottom:'1px solid var(--border)',fontSize:14}} onMouseEnter={e=>e.target.style.background='#f9fafb'} onMouseLeave={e=>e.target.style.background='white'}>
+              <span style={{fontWeight:700}}>{u.nome} {u.cognome}</span>
+              <span style={{color:'var(--text-secondary)',marginLeft:8,fontSize:12}}>{u.email}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {open && query && filtered.length === 0 && (
+        <div style={{position:'absolute',top:'100%',left:0,right:0,background:'white',border:'1.5px solid var(--border)',borderRadius:12,zIndex:100,padding:'12px 14px',fontSize:14,color:'var(--text-secondary)'}}>
+          Nessun utente trovato
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AdminScreen() {
   const [tab, setTab] = React.useState('stats');
   const [stats, setStats] = React.useState(null);
   const [blocked, setBlocked] = React.useState([]);
   const [bookings, setBookings] = React.useState([]);
   const [users, setUsers] = React.useState([]);
-  const [blockForm, setBlockForm] = React.useState({slot:'20:00-21:30',date:'',reason:''});
+  const [blockForm, setBlockForm] = React.useState({slot:'20:00-21:00',date:'',reason:'',assignUserId:''});
   const [bookForUser, setBookForUser] = React.useState(null); // utente selezionato per prenotare
-  const [bookForm, setBookForm] = React.useState({date:'',slot:'20:00-21:30',teamName:'',notes:''});
-  const SLOTS = ['08:00-09:30','09:30-11:00','11:00-12:30','12:30-14:00','14:00-15:30','15:30-17:00','17:00-18:30','18:30-20:00','20:00-21:30','21:30-23:00'];
+  const [bookForm, setBookForm] = React.useState({date:'',slot:'20:00-21:00',teamName:'',notes:''});
+  const SLOTS = ['08:00-09:00','09:00-10:00','10:00-11:00','11:00-12:00','12:00-13:00','13:00-14:00','14:00-15:00','15:00-16:00','16:00-17:00','17:00-18:00','18:00-19:00','19:00-20:00','20:00-21:00','21:00-22:00','22:00-23:00'];
 
   React.useEffect(() => { load(); }, [tab]);
 
   const load = async () => {
     try {
       if (tab==='stats') { const r = await api.get('/admin/stats'); setStats(r.data); }
-      else if (tab==='slots') { const r = await api.get('/admin/slots'); setBlocked(r.data.blocked); }
+      else if (tab==='slots') {
+        const [slotsRes, usersRes] = await Promise.all([api.get('/admin/slots'), api.get('/admin/users')]);
+        setBlocked(slotsRes.data.blocked);
+        setUsers(usersRes.data.users);
+      }
       else if (tab==='bookings') { const r = await api.get('/admin/bookings'); setBookings(r.data.bookings); }
       else if (tab==='users') { const r = await api.get('/admin/users'); setUsers(r.data.users); }
     } catch { showToast('Errore caricamento','error'); }
   };
 
   const blockSlot = async () => {
+    if (!blockForm.date) { showToast('La data è obbligatoria per prenotare','error'); return; }
     try {
+      // Se è stata selezionata anche una data, blocca la fascia
       await api.post('/admin/slots/block', {slot:blockForm.slot, date:blockForm.date||undefined, reason:blockForm.reason});
-      setBlockForm({slot:SLOTS[0],date:'',reason:''});
+      // Se è stato selezionato anche un utente, crea anche la prenotazione per lui
+      if (blockForm.assignUserId && blockForm.date) {
+        await api.post('/admin/bookings', {userId:blockForm.assignUserId, date:blockForm.date, timeSlot:blockForm.slot, teamName:blockForm.reason});
+        const u = users.find(u => u._id === blockForm.assignUserId);
+        showToast(`Fascia bloccata e prenotata per ${u?.nome} ${u?.cognome}!`,'success');
+      } else {
+        showToast('Fascia bloccata','success');
+      }
+      setBlockForm({slot:'20:00-21:00',date:'',reason:'',assignUserId:''});
       await load();
-      showToast('Fascia bloccata','success');
     } catch(e) { showToast(e.response?.data?.message||'Errore','error'); }
   };
 
@@ -628,8 +711,13 @@ function AdminScreen() {
               <label className="label">Data (vuoto = sempre bloccata)</label>
               <input className="input" type="date" value={blockForm.date} onChange={e=>setBlockForm(f=>({...f,date:e.target.value}))} />
               <label className="label">Motivo</label>
-              <input className="input" placeholder="Es. Manutenzione" value={blockForm.reason} onChange={e=>setBlockForm(f=>({...f,reason:e.target.value}))} />
-              <button className="btn btn-danger" onClick={blockSlot} style={{marginTop:12}}>🚫 Blocca Fascia</button>
+              <input className="input" placeholder="Es. Manutenzione, Torneo..." value={blockForm.reason} onChange={e=>setBlockForm(f=>({...f,reason:e.target.value}))} />
+              <label className="label">Assegna a utente (opzionale)</label>
+              <UserSearch users={users} value={blockForm.assignUserId} onChange={id=>setBlockForm(f=>({...f,assignUserId:id}))} />
+              {blockForm.assignUserId && <p style={{fontSize:12,color:'var(--primary)',marginTop:6}}>ℹ️ La fascia verrà bloccata e prenotata automaticamente per l'utente selezionato.</p>}
+              <button className="btn btn-danger" onClick={blockSlot} style={{marginTop:12}}>
+                {blockForm.assignUserId ? '📅 Blocca e Prenota' : '🚫 Blocca Fascia'}
+              </button>
             </div>
             {blocked.length===0 ? <p style={{textAlign:'center',color:'var(--text-secondary)',paddingTop:20}}>Nessuna fascia bloccata</p> :
             blocked.map(b => (
