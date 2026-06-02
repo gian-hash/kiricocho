@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Kiricocho",
+    "slug": "kiricocho",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#16a34a"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kiricocho.app",
+      "buildNumber": "1"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#16a34a"
+      },
+      "package": "com.kiricocho.app",
+      "versionCode": 1,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Kiricocho vuole accedere alle tue foto per pubblicare contenuti.",
+          "cameraPermission": "Kiricocho vuole accedere alla fotocamera."
+        }
+      ]
+    ],
+    "scheme": "kiricocho",
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}

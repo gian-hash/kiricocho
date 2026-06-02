@@ -1,91 +1,63 @@
-import express from "express";
-import bcrypt from "bcryptjs";
-import User from "../models/User.js";
-import jwt from "jsonwebtoken";
+const router = require('express').Router();
+const jwt = require('jsonwebtoken');
+const { body, validationResult } = require('express-validator');
+const User = require('../models/User');
 
-const router = express.Router();
+const generateToken = (id) =>
+  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN || '7d' });
 
-// REGISTRAZIONE UTENTE
-router.post("/register", async (req, res) => {
-  try {
+// POST /api/auth/register
+router.post(
+  '/register',
+  [
+    body('nome').trim().notEmpty().withMessage('Nome obbligatorio'),
+    body('cognome').trim().notEmpty().withMessage('Cognome obbligatorio'),
+    body('email').isEmail().withMessage('Email non valida'),
+    body('telefono').trim().notEmpty().withMessage('Telefono obbligatorio'),
+    body('password').isLength({ min: 6 }).withMessage('Password minimo 6 caratteri'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
     const { nome, cognome, email, telefono, password } = req.body;
 
-    // Controllo campi obbligatori
-    if (!nome || !cognome || !email || !telefono || !password) {
-      return res.status(400).json({ message: "Tutti i campi sono obbligatori" });
-    }
+    const existing = await User.findOne({ email });
+    if (existing) return res.status(400).json({ message: 'Email già registrata.' });
 
-    // Controllo se l'utente esiste già
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "Email già registrata" });
-    }
+    const user = await User.create({ nome, cognome, email, telefono, password });
+    const token = generateToken(user._id);
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Creazione utente
-    const newUser = new User({
-      nome,
-      cognome,
-      email,
-      telefono,
-      password: hashedPassword
-    });
-
-    await newUser.save();
-
-    res.status(201).json({ message: "Registrazione completata" });
-  } catch (error) {
-    res.status(500).json({ message: "Errore server", error });
+    res.status(201).json({ token, user: user.toSafeJSON() });
   }
-});
+);
 
-// LOGIN
-router.post("/login", async (req, res) => {
-  try {
+// POST /api/auth/login
+router.post(
+  '/login',
+  [
+    body('email').isEmail().withMessage('Email non valida'),
+    body('password').notEmpty().withMessage('Password obbligatoria'),
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+
     const { email, password } = req.body;
-
-    // Controllo campi
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email e password sono obbligatori" });
-    }
-
-    // Controllo utente
     const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "Credenziali non valide" });
+    if (!user || !(await user.comparePassword(password))) {
+      return res.status(401).json({ message: 'Credenziali non valide.' });
     }
+    if (!user.isActive) return res.status(403).json({ message: 'Account disabilitato.' });
 
-    // Controllo password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Credenziali non valide" });
-    }
-
-    // Generazione token
-    const token = jwt.sign(
-      { id: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    res.json({
-      message: "Login effettuato",
-      token,
-      user: {
-        id: user._id,
-        nome: user.nome,
-        cognome: user.cognome,
-        email: user.email,
-        telefono: user.telefono,
-        livello: user.livello
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Errore server", error });
+    const token = generateToken(user._id);
+    res.json({ token, user: user.toSafeJSON() });
   }
+);
+
+// GET /api/auth/me
+router.get('/me', require('../middleware/auth').auth, (req, res) => {
+  res.json({ user: req.user.toSafeJSON ? req.user.toSafeJSON() : req.user });
 });
 
-
-export default router;
+module.exports = router;
