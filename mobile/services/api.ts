@@ -2,7 +2,7 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
 // Cambia con il tuo IP locale o URL di produzione
-const BASE_URL = __DEV__ ? 'http://192.168.1.100:5000/api' : 'https://api.kiricocho.com/api';
+const BASE_URL = 'https://kiricocho-production.up.railway.app/api';
 
 const api = axios.create({ baseURL: BASE_URL, timeout: 10000 });
 

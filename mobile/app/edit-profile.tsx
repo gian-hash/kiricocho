@@ -59,7 +59,7 @@ export default function EditProfileScreen() {
         <View style={styles.avatarSection}>
           <TouchableOpacity onPress={pickAvatar}>
             {avatar || user?.avatar ? (
-              <Image source={{ uri: avatar || `http://192.168.1.100:5000${user?.avatar}` }} style={styles.avatar} />
+              <Image source={{ uri: avatar || `https://kiricocho-production.up.railway.app${user?.avatar}` }} style={styles.avatar} />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarInitials}>{user?.nome[0]}{user?.cognome[0]}</Text>

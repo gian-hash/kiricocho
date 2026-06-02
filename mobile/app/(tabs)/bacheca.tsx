@@ -122,7 +122,7 @@ export default function BachecaScreen() {
 
         {item.title ? <Text style={styles.postTitle}>{item.title}</Text> : null}
         <Text style={styles.postContent}>{item.content}</Text>
-        {item.image && <Image source={{ uri: `http://192.168.1.100:5000${item.image}` }} style={styles.postImage} />}
+        {item.image && <Image source={{ uri: `https://kiricocho-production.up.railway.app${item.image}` }} style={styles.postImage} />}
 
         <View style={styles.actions}>
           <TouchableOpacity style={styles.actionBtn} onPress={() => toggleLike(item._id)}>

@@ -82,7 +82,7 @@ export default function ProfiloScreen() {
       <View style={styles.header}>
         <View style={styles.avatarContainer}>
           {user.avatar ? (
-            <Image source={{ uri: `http://192.168.1.100:5000${user.avatar}` }} style={styles.avatarImg} />
+            <Image source={{ uri: `https://kiricocho-production.up.railway.app${user.avatar}` }} style={styles.avatarImg} />
           ) : (
             <View style={styles.avatarPlaceholder}>
               <Text style={styles.avatarInitials}>{user.nome[0]}{user.cognome[0]}</Text>
