@@ -466,6 +466,18 @@ function ProfiloScreen({ user, setUser, onLogout }) {
     api.get('/auth/me').then(r => setUser(r.data.user)).catch(()=>{});
   }, []);
 
+  const cancelBooking = async (id) => {
+    if (!confirm('Vuoi cancellare questa prenotazione?')) return;
+    try {
+      await api.delete(`/bookings/${id}`);
+      const r = await api.get('/bookings/my');
+      setBookings(r.data.bookings);
+      showToast('Prenotazione cancellata', 'success');
+    } catch(e) {
+      showToast(e.response?.data?.message || 'Errore cancellazione', 'error');
+    }
+  };
+
   if (!user) return null;
   const lvl = user.level;
   const upcoming = bookings.filter(b => b.date >= new Date().toISOString().slice(0,10) && b.status==='confirmed');
@@ -516,7 +528,10 @@ function ProfiloScreen({ user, setUser, onLogout }) {
                 <div style={{fontSize:13,color:'var(--primary)'}}>⏰ {b.timeSlot}</div>
                 {b.teamName && <div style={{fontSize:12,color:'var(--text-secondary)'}}>👥 {b.teamName}</div>}
               </div>
-              <span className="chip chip-green">Confermata</span>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:6}}>
+                <span className="chip chip-green">Confermata</span>
+                <button onClick={() => cancelBooking(b._id)} style={{background:'#fef2f2',color:'var(--error)',border:'none',borderRadius:8,padding:'4px 10px',cursor:'pointer',fontWeight:700,fontSize:12}}>✕ Cancella</button>
+              </div>
             </div>
           ))}
         </div>
@@ -552,7 +567,7 @@ function AdminScreen() {
   const [blockForm, setBlockForm] = React.useState({slot:'20:00-21:30',date:'',reason:''});
   const [bookForUser, setBookForUser] = React.useState(null); // utente selezionato per prenotare
   const [bookForm, setBookForm] = React.useState({date:'',slot:'20:00-21:30',teamName:'',notes:''});
-  const SLOTS = ['08:00-09:30','09:30-11:00','11:00-12:30','12:30-14:00','14:00-15:30','15:30-17:00','17:00-18:30','18:30-20:00','20:00-21:30','21:30-23:00'];
+  const SLOTS = ['08:00-09:00','09:00-10:00','10:00-11:00','11:00-12:00','12:00-13:00','13:00-14:00','14:00-15:00','15:00-16:00','16:00-17:00','17:00-18:00','18:00-19:00','19:00-20:00','20:00-21:00','21:00-22:00','22:00-23:00'];
 
   React.useEffect(() => { load(); }, [tab]);
 
