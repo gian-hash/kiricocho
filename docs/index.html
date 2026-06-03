@@ -439,7 +439,7 @@ function PrenotaScreen() {
 
   return (
     <div>
-      <div className="header"><h1>📅 Prenota il Campo</h1><p>Scegli data e fascia oraria</p></div>
+      <div className="header"><h1>📅 Prenota il campo</h1><p>Scegli data e fascia oraria</p></div>
       <div className="content">
         <div className="card">
           <label className="label" style={{marginTop:0}}>Seleziona data</label>
@@ -683,8 +683,9 @@ function AdminScreen() {
   const [bookings, setBookings] = React.useState([]);
   const [users, setUsers] = React.useState([]);
   const [blockForm, setBlockForm] = React.useState({slot:'20:00-21:00',date:'',reason:'',assignUserId:''});
-  const [bookForUser, setBookForUser] = React.useState(null); // utente selezionato per prenotare
+  const [bookForUser, setBookForUser] = React.useState(null);
   const [bookForm, setBookForm] = React.useState({date:'',slot:'20:00-21:00',teamName:'',notes:''});
+  const [filterDate, setFilterDate] = React.useState('');
   const SLOTS = ['08:00-09:00','09:00-10:00','10:00-11:00','11:00-12:00','12:00-13:00','13:00-14:00','14:00-15:00','15:00-16:00','16:00-17:00','17:00-18:00','18:00-19:00','19:00-20:00','20:00-21:00','21:00-22:00','22:00-23:00'];
 
   React.useEffect(() => { load(); }, [tab]);
@@ -697,7 +698,7 @@ function AdminScreen() {
         setBlocked(slotsRes.data.blocked);
         setUsers(usersRes.data.users);
       }
-      else if (tab==='bookings') { const r = await api.get('/admin/bookings'); setBookings(r.data.bookings); }
+      else if (tab==='bookings') { const r = await api.get(`/admin/bookings${filterDate ? `?date=${filterDate}` : ''}`); setBookings(r.data.bookings); }
       else if (tab==='users') { const r = await api.get('/admin/users'); setUsers(r.data.users); }
     } catch { showToast('Errore caricamento','error'); }
   };
@@ -795,8 +796,26 @@ function AdminScreen() {
           </>
         )}
         {tab==='bookings' && (
-          bookings.length===0 ? <p style={{textAlign:'center',color:'var(--text-secondary)',paddingTop:20}}>Nessuna prenotazione</p> :
-          bookings.map(b => (
+          <>
+            <div className="card" style={{display:'flex',alignItems:'center',gap:10,marginBottom:4}}>
+              <span style={{fontSize:14,fontWeight:600,whiteSpace:'nowrap'}}>📅 Filtra per data:</span>
+              <input
+                type="date"
+                className="input"
+                style={{flex:1,padding:'8px 12px',fontSize:14}}
+                value={filterDate}
+                onChange={e => setFilterDate(e.target.value)}
+              />
+              {filterDate && (
+                <button onClick={() => setFilterDate('')} style={{background:'none',border:'none',cursor:'pointer',fontSize:18,color:'var(--text-secondary)'}}>✕</button>
+              )}
+              <button onClick={load} style={{background:'var(--primary)',color:'white',border:'none',borderRadius:10,padding:'8px 14px',cursor:'pointer',fontWeight:700,fontSize:13}}>Cerca</button>
+            </div>
+            {filterDate && <p style={{fontSize:12,color:'var(--text-secondary)',marginBottom:8,paddingLeft:4}}>
+              {bookings.length} prenotazion{bookings.length===1?'e':'i'} per {new Date(filterDate+'T12:00:00').toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}
+            </p>}
+            {bookings.length===0 ? <p style={{textAlign:'center',color:'var(--text-secondary)',paddingTop:20}}>Nessuna prenotazione{filterDate?' per questa data':''}</p> :
+            bookings.map(b => (
             <div key={b._id} className="card" style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}>
               <div style={{flex:1}}>
                 <div style={{fontWeight:700}}>{b.user?.nome} {b.user?.cognome}</div>
@@ -814,7 +833,8 @@ function AdminScreen() {
                 {b.gameCompleted && <span style={{fontSize:12,color:'var(--success)',fontWeight:700}}>✅ Giocata</span>}
               </div>
             </div>
-          ))
+            ))}
+          </>
         )}
         {tab==='users' && (
           <>

@@ -75,7 +75,7 @@ export default function PrenotaScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.headerBar}>
-        <Text style={styles.headerTitle}>📅 Prenota il Campo</Text>
+        <Text style={styles.headerTitle}>📅 Prenota il campo</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
@@ -132,14 +132,6 @@ export default function PrenotaScreen() {
             <Text style={styles.modalInfo}>📅 {formatDate(selectedDate)}</Text>
             <Text style={styles.modalInfo}>⏰ {selectedSlot}</Text>
 
-            <Text style={styles.label}>Nome squadra (opzionale)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Es. FC Kiricocho"
-              placeholderTextColor={Colors.textSecondary}
-              value={teamName}
-              onChangeText={setTeamName}
-            />
 
             <Text style={styles.label}>Note (opzionale)</Text>
             <TextInput
