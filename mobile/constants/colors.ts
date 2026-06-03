@@ -1,7 +1,7 @@
 export const Colors = {
-  primary: '#16a34a',      // verde campo
-  primaryDark: '#15803d',
-  primaryLight: '#dcfce7',
+  primary: '#1a56db',      // blu maglia
+  primaryDark: '#1344b0',
+  primaryLight: '#dbeafe',
   secondary: '#1e3a5f',    // blu notte
   accent: '#f59e0b',       // giallo pallone
   background: '#f9fafb',
