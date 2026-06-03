@@ -16,8 +16,8 @@ router.get('/', auth, async (req, res) => {
   res.json({ posts, total, page: Number(page) });
 });
 
-// POST /api/posts — crea post (admin o user)
-router.post('/', auth, upload.single('image'), async (req, res) => {
+// POST /api/posts — crea post (solo admin)
+router.post('/', auth, adminOnly, upload.single('image'), async (req, res) => {
   const { type, title, content } = req.body;
   if (!content) return res.status(400).json({ message: 'Contenuto obbligatorio.' });
 
