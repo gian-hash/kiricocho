@@ -111,6 +111,35 @@ function showToast(msg, type = 'info') {
   setTimeout(() => t.classList.remove('show'), 3000);
 }
 
+// Lightbox globale per avatar
+function AvatarLightbox({ src, name, onClose }) {
+  if (!src) return null;
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:9999,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer'}}>
+      <img src={src} style={{width:240,height:240,borderRadius:'50%',objectFit:'cover',border:'4px solid white',boxShadow:'0 8px 32px rgba(0,0,0,0.5)'}} onClick={e=>e.stopPropagation()} />
+      <p style={{color:'white',fontWeight:700,fontSize:18,marginTop:16}}>{name}</p>
+      <p style={{color:'rgba(255,255,255,0.6)',fontSize:13,marginTop:4}}>Tocca per chiudere</p>
+    </div>
+  );
+}
+
+// Avatar cliccabile — mostra iniziali oppure foto, apre lightbox se c'è foto
+function ClickableAvatar({ avatar, nome, cognome, size=40 }) {
+  const [open, setOpen] = React.useState(false);
+  const initials = `${nome?.[0]||''}${cognome?.[0]||''}`;
+  return (
+    <>
+      <div
+        onClick={() => avatar && setOpen(true)}
+        style={{width:size,height:size,borderRadius:'50%',background:'var(--primary)',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontWeight:700,fontSize:size*0.35,flexShrink:0,overflow:'hidden',cursor:avatar?'pointer':'default',border:avatar?'2px solid var(--primary-light)':'none'}}
+      >
+        {avatar ? <img src={avatar} style={{width:'100%',height:'100%',objectFit:'cover'}} /> : initials}
+      </div>
+      {open && <AvatarLightbox src={avatar} name={`${nome} ${cognome}`} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
 function App() {
   const [screen, setScreen] = React.useState('loading');
   const [user, setUser] = React.useState(null);
@@ -346,7 +375,7 @@ function BachecaScreen({ user }) {
             <div key={p._id} className="post-card" style={p.pinned?{borderLeft:'4px solid var(--accent)'}:{}}>
               {p.pinned && <div style={{fontSize:12,color:'var(--accent)',fontWeight:700,marginBottom:8}}>📌 In evidenza</div>}
               <div className="post-header">
-                <div className="avatar">{p.author?.nome?.[0]}{p.author?.cognome?.[0]}</div>
+                <ClickableAvatar avatar={p.author?.avatar} nome={p.author?.nome} cognome={p.author?.cognome} />
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700,fontSize:14}}>{p.author?.nome} {p.author?.cognome}</div>
                   <div style={{fontSize:12,color:'var(--text-secondary)'}}>{TYPES[p.type]?.split(' ')[0]} {new Date(p.createdAt).toLocaleDateString('it-IT')}</div>
@@ -840,7 +869,7 @@ function AdminScreen() {
           <>
             {users.map(u => (
               <div key={u._id} className="card" style={{display:'flex',alignItems:'center',gap:12}}>
-                <div className="avatar">{u.nome[0]}{u.cognome[0]}</div>
+                <ClickableAvatar avatar={u.avatar} nome={u.nome} cognome={u.cognome} size={44} />
                 <div style={{flex:1}}>
                   <div style={{fontWeight:700}}>{u.nome} {u.cognome}</div>
                   <div style={{fontSize:12,color:'var(--text-secondary)'}}>{u.email}</div>
