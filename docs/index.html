@@ -260,6 +260,7 @@ function BachecaScreen({ user }) {
   const [newPost, setNewPost] = React.useState({type:'news',title:'',content:'',imageFile:null,imagePreview:null});
   const [commentText, setCommentText] = React.useState({});
   const [showComments, setShowComments] = React.useState({});
+  const [showLikes, setShowLikes] = React.useState(null); // id post di cui mostrare i like
 
   React.useEffect(() => { load(); }, []);
 
@@ -355,9 +356,29 @@ function BachecaScreen({ user }) {
               {p.title && <div style={{fontWeight:700,fontSize:16,marginBottom:6}}>{p.title}</div>}
               <div style={{fontSize:14,lineHeight:1.5,color:'var(--text)'}}>{p.content}</div>
               <div style={{display:'flex',gap:20,marginTop:12,paddingTop:12,borderTop:'1px solid var(--border)'}}>
-                <button onClick={() => toggleLike(p._id)} style={{background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:14,color:liked?'var(--error)':'var(--text-secondary)'}}>
-                  {liked ? '❤️' : '🤍'} {p.likes?.length||0}
-                </button>
+                <div style={{position:'relative'}}>
+                  <button
+                    onClick={() => toggleLike(p._id)}
+                    onMouseEnter={() => p.likes?.length > 0 && setShowLikes(p._id)}
+                    onMouseLeave={() => setShowLikes(null)}
+                    style={{background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:14,color:liked?'var(--error)':'var(--text-secondary)'}}
+                  >
+                    {liked ? '❤️' : '🤍'} {p.likes?.length||0}
+                  </button>
+                  {showLikes === p._id && p.likes?.length > 0 && (
+                    <div style={{position:'absolute',bottom:'110%',left:0,background:'white',border:'1px solid var(--border)',borderRadius:12,padding:'10px 14px',boxShadow:'0 4px 16px rgba(0,0,0,0.12)',zIndex:50,minWidth:160,maxWidth:220}}>
+                      <div style={{fontSize:12,fontWeight:700,color:'var(--text-secondary)',marginBottom:6}}>❤️ Mi piace di:</div>
+                      {p.likes.map((like, i) => (
+                        <div key={i} style={{fontSize:13,color:'var(--text)',padding:'3px 0',display:'flex',alignItems:'center',gap:6}}>
+                          <div style={{width:24,height:24,borderRadius:'50%',background:'var(--primary)',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontSize:11,fontWeight:700,flexShrink:0}}>
+                            {like.nome ? like.nome[0]+like.cognome[0] : '?'}
+                          </div>
+                          {like.nome ? `${like.nome} ${like.cognome}` : 'Utente'}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <button onClick={() => setShowComments(s=>({...s,[p._id]:!s[p._id]}))} style={{background:'none',border:'none',cursor:'pointer',display:'flex',alignItems:'center',gap:4,fontSize:14,color:'var(--text-secondary)'}}>
                   💬 {p.comments?.length||0}
                 </button>
@@ -460,6 +481,7 @@ function PrenotaScreen() {
 function ProfiloScreen({ user, setUser, onLogout }) {
   const [bookings, setBookings] = React.useState([]);
   const LEVELS = ['🌱','⭐','🌟','🏅','🏆'];
+  const fileInputRef = React.useRef();
 
   React.useEffect(() => {
     api.get('/bookings/my').then(r => setBookings(r.data.bookings)).catch(()=>{});
@@ -478,6 +500,23 @@ function ProfiloScreen({ user, setUser, onLogout }) {
     }
   };
 
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const base64 = ev.target.result;
+      try {
+        const r = await api.patch('/users/profile', { avatar: base64 });
+        setUser(r.data.user);
+        showToast('Foto profilo aggiornata!', 'success');
+      } catch {
+        showToast('Errore aggiornamento foto', 'error');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   if (!user) return null;
   const lvl = user.level;
   const upcoming = bookings.filter(b => b.date >= new Date().toISOString().slice(0,10) && b.status==='confirmed');
@@ -486,8 +525,18 @@ function ProfiloScreen({ user, setUser, onLogout }) {
   return (
     <div>
       <div className="header" style={{textAlign:'center'}}>
-        <div style={{width:72,height:72,borderRadius:'50%',background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',margin:'0 auto 12px',fontSize:28,fontWeight:700,color:'white'}}>
-          {user.nome[0]}{user.cognome[0]}
+        <div style={{position:'relative',width:72,margin:'0 auto 12px'}}>
+          <div
+            onClick={() => fileInputRef.current.click()}
+            style={{width:72,height:72,borderRadius:'50%',overflow:'hidden',cursor:'pointer',border:'3px solid rgba(255,255,255,0.4)',position:'relative'}}
+          >
+            {user.avatar
+              ? <img src={user.avatar} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+              : <div style={{width:'100%',height:'100%',background:'rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:28,fontWeight:700,color:'white'}}>{user.nome[0]}{user.cognome[0]}</div>
+            }
+          </div>
+          <div onClick={() => fileInputRef.current.click()} style={{position:'absolute',bottom:0,right:0,background:'white',borderRadius:'50%',width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',fontSize:13,boxShadow:'0 1px 4px rgba(0,0,0,0.2)'}}>📷</div>
+          <input ref={fileInputRef} type="file" accept="image/*" style={{display:'none'}} onChange={handleAvatarChange} />
         </div>
         <h1 style={{fontSize:22}}>{user.nome} {user.cognome}</h1>
         <p>{user.email}</p>

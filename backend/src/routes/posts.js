@@ -11,6 +11,7 @@ router.get('/', auth, async (req, res) => {
     .skip((page - 1) * limit)
     .limit(Number(limit))
     .populate('author', 'nome cognome avatar role')
+    .populate('likes', 'nome cognome')
     .populate('comments.user', 'nome cognome');
   const total = await Post.countDocuments();
   res.json({ posts, total, page: Number(page) });

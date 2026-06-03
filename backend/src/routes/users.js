@@ -9,14 +9,14 @@ router.get('/profile', auth, async (req, res) => {
   res.json({ user: user.toSafeJSON() });
 });
 
-// PATCH /api/users/profile — aggiorna dati profilo
-router.patch('/profile', auth, upload.single('avatar'), async (req, res) => {
-  const { nome, cognome, telefono } = req.body;
+// PATCH /api/users/profile — aggiorna dati profilo + avatar base64
+router.patch('/profile', auth, async (req, res) => {
+  const { nome, cognome, telefono, avatar } = req.body;
   const updates = {};
   if (nome) updates.nome = nome;
   if (cognome) updates.cognome = cognome;
   if (telefono) updates.telefono = telefono;
-  if (req.file) updates.avatar = `/uploads/${req.file.filename}`;
+  if (avatar) updates.avatar = avatar; // stringa base64 es. "data:image/jpeg;base64,..."
 
   const user = await User.findByIdAndUpdate(req.user._id, updates, { new: true }).select('-password');
   res.json({ user: user.toSafeJSON() });
