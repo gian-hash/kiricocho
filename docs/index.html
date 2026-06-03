@@ -640,17 +640,16 @@ function AdminScreen() {
   };
 
   const blockSlot = async () => {
-    if (!blockForm.date) { showToast('La data è obbligatoria per prenotare','error'); return; }
     try {
-      // Se è stata selezionata anche una data, blocca la fascia
-      await api.post('/admin/slots/block', {slot:blockForm.slot, date:blockForm.date||undefined, reason:blockForm.reason});
-      // Se è stato selezionato anche un utente, crea anche la prenotazione per lui
       if (blockForm.assignUserId && blockForm.date) {
+        // Prima prenota per l'utente, poi blocca
         await api.post('/admin/bookings', {userId:blockForm.assignUserId, date:blockForm.date, timeSlot:blockForm.slot, teamName:blockForm.reason});
+        await api.post('/admin/slots/block', {slot:blockForm.slot, date:blockForm.date||undefined, reason:blockForm.reason});
         const u = users.find(u => u._id === blockForm.assignUserId);
         showToast(`Fascia bloccata e prenotata per ${u?.nome} ${u?.cognome}!`,'success');
       } else {
-        showToast('Fascia bloccata','success');
+        await api.post('/admin/slots/block', {slot:blockForm.slot, date:blockForm.date||undefined, reason:blockForm.reason});
+        showToast('Fascia oraria bloccata','success');
       }
       setBlockForm({slot:'20:00-21:00',date:'',reason:'',assignUserId:''});
       await load();
