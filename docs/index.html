@@ -69,6 +69,7 @@
     .modal-overlay.show { display: flex; }
     .modal { background: white; border-radius: 24px 24px 0 0; padding: 24px; width: 100%; max-width: 430px; margin: 0 auto; }
     .login-screen { background: var(--primary); min-height: 100vh; display: flex; flex-direction: column; justify-content: center; padding: 24px; }
+    .login-wrapper { max-width: 430px; width: 100%; margin: 0 auto; }
     .login-screen .logo { text-align: center; margin-bottom: 32px; }
     .login-screen .logo h1 { font-size: 42px; font-weight: 800; color: white; }
     .login-screen .logo p { color: rgba(255,255,255,0.8); font-size: 14px; }
@@ -221,18 +222,20 @@ function LoginScreen({ onRegister, onLogin }) {
 
   return (
     <div className="login-screen">
-      <div className="logo">
-        <img src="./logo_nobg.png" alt="Kiricocho" style={{width:'100%',maxWidth:384,marginBottom:8,display:'block',marginLeft:'auto',marginRight:'auto'}} />
-      </div>
-      <div className="form-card">
-        <label className="label">Email</label>
-        <input className="input" type="email" placeholder="la-tua@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} />
-        <label className="label">Password</label>
-        <input className="input" type="password" placeholder="••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} />
-        <button className="btn" onClick={submit} disabled={loading} style={{marginTop:20}}>{loading ? 'Accesso...' : 'Accedi'}</button>
-        <p style={{textAlign:'center',marginTop:16,fontSize:14,color:'#6b7280'}}>
-          Non hai un account? <button className="link-btn" onClick={onRegister}>Registrati</button>
-        </p>
+      <div className="login-wrapper">
+        <div className="logo">
+          <img src="./logo_nobg.png" alt="Kiricocho" style={{width:'100%',maxWidth:320,marginBottom:8,display:'block',marginLeft:'auto',marginRight:'auto'}} />
+        </div>
+        <div className="form-card">
+          <label className="label">Email</label>
+          <input className="input" type="email" placeholder="la-tua@email.com" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} />
+          <label className="label">Password</label>
+          <input className="input" type="password" placeholder="••••••" value={password} onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} />
+          <button className="btn" onClick={submit} disabled={loading} style={{marginTop:20}}>{loading ? 'Accesso...' : 'Accedi'}</button>
+          <p style={{textAlign:'center',marginTop:16,fontSize:14,color:'#6b7280'}}>
+            Non hai un account? <button className="link-btn" onClick={onRegister}>Registrati</button>
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -258,6 +261,7 @@ function RegisterScreen({ onBack, onSuccess }) {
 
   return (
     <div className="login-screen" style={{justifyContent:'flex-start',paddingTop:60}}>
+      <div className="login-wrapper">
       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24}}>
         <button onClick={onBack} style={{background:'none',border:'none',color:'white',fontSize:20,cursor:'pointer'}}>← Indietro</button>
         <h2 style={{color:'white',fontSize:20,fontWeight:800}}>⚽ Kiricocho</h2>
@@ -275,6 +279,7 @@ function RegisterScreen({ onBack, onSuccess }) {
         <p style={{textAlign:'center',marginTop:16,fontSize:14,color:'#6b7280'}}>
           Hai già un account? <button className="link-btn" onClick={onBack}>Accedi</button>
         </p>
+      </div>
       </div>
     </div>
   );
